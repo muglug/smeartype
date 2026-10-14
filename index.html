@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Smeartype — A subpixel type lab</title><meta name="description" content="Explore ClearType-style text rendering with FreeType WASM and an HTML Canvas."><link rel="stylesheet" href="src/style.css"></head>
+<body>
+<main>
+<div class="workspace">
+<aside>
+<form id="controls">
+<label for="text">Text</label><textarea id="text" rows="4" maxlength="2000" spellcheck="false">The quick brown fox jumps over the lazy dog.
+Typography is the craft of making language visible.
+Hamburgefontsiv 0123456789 & @</textarea>
+<div class="font-row"><div><span class="muted">Font</span><strong id="font-name">Lato Regular</strong></div><button type="button" id="upload" class="upload" title="Load a local TTF, OTF or WOFF font">Upload font</button><input type="file" id="font-file" accept=".ttf,.otf,.woff" hidden></div>
+<label for="size" class="range-label">Size <output id="size-value">18 px</output></label><input id="size" type="range" min="8" max="48" step="1" value="18">
+<label for="mode">Rasterizer</label><select id="mode"><option value="lcd">LCD · filtered outline</option><option value="harmony">Harmony · native FreeType</option><option value="gray">Grayscale · native FreeType</option></select>
+<div class="two-col"><div><label for="axis">Stripe direction</label><select id="axis"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></div><div><label for="order">Channel order</label><select id="order"><option value="rgb">RGB</option><option value="bgr">BGR</option></select></div></div>
+<div id="geometry-row" hidden><label for="geometry">Harmony geometry</label><select id="geometry"><option value="stripe">RGB stripe</option><option value="pentile">PenTile-style offsets</option></select></div>
+<label class="checkbox"><input id="hinting" type="checkbox" checked><span>TrueType v40 hinting</span></label>
+<div id="filter-controls"><label for="filter">LCD filter</label><select id="filter"><option value="default">Default · balanced</option><option value="light">Light · sharper</option><option value="none">None · raw subpixels</option><option value="custom">Custom · five taps</option></select>
+<div id="custom-row" hidden><label for="weights">Weights (normalized automatically)</label><input id="weights" value="8, 77, 86, 77, 8" aria-describedby="weight-help"><small id="weight-help">Five comma-separated values, from left to right.</small></div>
+</div>
+<label for="gamma" class="range-label">Blend gamma <output id="gamma-value">2.2</output></label><input id="gamma" type="range" min="1" max="3" step="0.1" value="2.2">
+<label for="strength" class="range-label">Ink strength <output id="strength-value">1.00</output></label><input id="strength" type="range" min="0.7" max="1.5" step="0.05" value="1">
+<div class="colors"><label for="foreground"><input id="foreground" type="color" value="#222222">Ink</label><label for="background"><input id="background" type="color" value="#ffffff">Paper</label></div>
+</form><button id="reset" class="reset">Reset</button></aside>
+<section class="results" aria-label="Rendering comparison"><div class="results-header"><button id="export" disabled>Export PNG</button></div>
+<div class="specimen"><div class="specimen-heading"><span id="mode-label">LCD</span></div><canvas id="rendered" aria-label="Subpixel rendered specimen"></canvas></div>
+<div class="specimen"><div class="specimen-heading"><span>Grayscale</span></div><canvas id="comparison" aria-label="Grayscale comparison specimen"></canvas></div>
+<section class="inspector" aria-label="Pixel inspector"><div class="inspector-heading"><div class="zoom"><label for="zoom">Zoom</label><select id="zoom"><option value="6">6×</option><option value="12" selected>12×</option><option value="20">20×</option></select></div></div><div class="magnifier"><canvas id="magnified" aria-label="Magnified pixels"></canvas><span id="inspect-label">LCD · 12×</span></div></section>
+<div class="sr-only" id="status" role="status" aria-live="polite">Initializing FreeType…</div><div id="error" role="alert" hidden></div>
+</section></div>
+</main>
+<footer><details><summary>Licenses</summary><p>Portions of this software are copyright © The FreeType Project (www.freetype.org). All rights reserved.</p><a href="public/fonts/OFL.txt">Lato OFL</a> · <a href="vendor/OPENTYPE-LICENSE">OpenType license</a></details></footer>
+<script type="module" src="src/app.js"></script>
+</body></html>

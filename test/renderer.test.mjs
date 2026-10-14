@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { SubpixelRenderer } from '../src/renderer.js';
+import { bitmapCoverage, FILTERS, normalizeWeights, composite } from '../src/coverage.js';
+let tests=0;
+function test(name,fn){fn();tests++;console.log(`✓ ${name}`);}
+const renderer=await SubpixelRenderer.create({wasmBinary:await readFile('vendor/freetype/freetype.wasm')});
+renderer.loadFont(await readFile('public/fonts/Lato-Regular.ttf'));
+const options={text:'AV fi Hamburgefontsiv 0123',width:360,height:70,size:18,foreground:'#000000',background:'#ffffff'};
+const gray=renderer.render({...options,mode:'gray'});
+const lcd=renderer.render({...options,mode:'lcd'});
+const harmony=renderer.render({...options,mode:'harmony'});
+const colored=result=>{let n=0;for(let i=0;i<result.data.length;i+=4)if(result.data[i]!==result.data[i+1]||result.data[i+1]!==result.data[i+2])n++;return n;};
+test('WASM initializes with v40 and Harmony',()=>{assert.equal(renderer.capabilities.v40,true);assert.equal(renderer.capabilities.harmony,true);});
+test('grayscale has ink and equal RGB channels',()=>{assert.equal(colored(gray),0);assert(gray.data.some((v,i)=>i%4!==3&&v<200));});
+test('LCD and Harmony produce subpixel coverage',()=>{assert(colored(lcd)>50);assert(colored(harmony)>50);});
+test('RGB / BGR swap only red and blue',()=>{const bgr=renderer.render({...options,order:'bgr'});for(let i=0;i<lcd.data.length;i+=4){assert.equal(lcd.data[i],bgr.data[i+2]);assert.equal(lcd.data[i+1],bgr.data[i+1]);assert.equal(lcd.data[i+2],bgr.data[i]);}});
+test('vertical LCD and native LCD_V render',()=>{for(const mode of ['lcd','harmony']){const vertical=renderer.render({...options,mode,axis:'vertical'});assert(colored(vertical)>50);assert.notDeepEqual(vertical.data,lcd.data);}});
+test('filter changes output and suppresses fringe',()=>{const raw=renderer.render({...options,filter:'none'});const light=renderer.render({...options,filter:'light'});assert.notDeepEqual(raw.data,lcd.data);assert.notDeepEqual(light.data,lcd.data);const fringe=r=>{let sum=0;for(let i=0;i<r.data.length;i+=4)sum+=Math.max(...r.data.slice(i,i+3))-Math.min(...r.data.slice(i,i+3));return sum;};assert(fringe(lcd)<fringe(raw));});
+test('custom default weights reproduce default filter',()=>{assert.deepEqual(renderer.render({...options,filter:'custom',weights:[8,77,86,77,8]}).data,lcd.data);});
+test('hinting, gamma, geometry and fractional phase affect pixels',()=>{assert.notDeepEqual(renderer.render({...options,hinting:false}).data,lcd.data);assert.notDeepEqual(renderer.render({...options,gamma:1}).data,lcd.data);assert.notDeepEqual(renderer.render({...options,x:20.5}).data,lcd.data);assert.notDeepEqual(renderer.render({...options,mode:'harmony',geometry:'pentile'}).data,harmony.data);});
+test('opaque background, blank text, clipping and multiline',()=>{const blank=renderer.render({...options,text:'',background:'#123456'});assert.deepEqual([...blank.data.slice(0,4)],[18,52,86,255]);assert.equal(blank.glyphCount,0);for(let i=3;i<lcd.data.length;i+=4)assert.equal(lcd.data[i],255);assert.doesNotThrow(()=>renderer.render({...options,text:'j\nÁg',x:-2,baseline:3,width:30,height:30}));});
+test('invalid font retains prior face',()=>{assert.throws(()=>renderer.loadFont(new Uint8Array(12)));assert.deepEqual(renderer.render(options).data,lcd.data);});
+test('reject invalid filters and allocation sizes',()=>{assert.throws(()=>normalizeWeights([0,0,0,0,0]));assert.throws(()=>renderer.render({...options,width:90000}));assert.throws(()=>renderer.render({...options,filter:'custom',weights:[NaN,1,1,1,1]}));});
+test('FIR crosses pixel boundaries and retains negative bearings',()=>{const tile=bitmapCoverage({width:1,rows:1,pitch:1,buffer:new Uint8Array([255]),bitmapLeft:0,bitmapTop:1},{axis:'horizontal',raw:true,weights:FILTERS.default});assert.equal(tile.left,-1);assert(tile.coverage[1]>0);assert(Math.abs(tile.coverage.reduce((a,b)=>a+b,0)-1)<1e-6);});
+test('per-channel blending uses linearized light',()=>{const target=new Uint8ClampedArray([255,255,255,255]);composite(target,1,1,{width:1,height:1,left:0,top:0,coverage:[.5,.5,.5]},0,0,{foreground:[0,0,0],gamma:2.2});assert.equal(target[0],186);assert.equal(target[3],255);});
+renderer.destroy();console.log(`${tests} checks passed.`);

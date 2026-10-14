@@ -1,0 +1,17 @@
+{
+  "name": "smeartype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/prepare.mjs && node scripts/serve.mjs",
+    "build": "node scripts/prepare.mjs --build",
+    "preview": "node scripts/serve.mjs dist",
+    "test": "node test/renderer.test.mjs",
+    "pretest": "node scripts/prepare.mjs"
+  },
+  "dependencies": {
+    "@zkl2333/freetype-wasm": "2.14.3",
+    "opentype.js": "2.0.0"
+  }
+}
