@@ -22,7 +22,7 @@ function render() {
     const dpr = window.devicePixelRatio || 1;
     const cssWidth = Math.floor($('rendered').parentElement.clientWidth - 2);
     const cssHeight = 162;
-    const options = { text:$('text').value, size:Number($('size').value)*dpr, x:22*dpr, baseline:39*dpr, lineHeight:Number($('size').value)*1.65*dpr, mode:$('mode').value, axis:$('axis').value, order:$('order').value, geometry:$('mode').value === 'harmony' ? $('geometry').value : 'stripe', hinting:$('hinting').checked, filter:$('mode').value === 'lcd' ? $('filter').value : 'default', weights:$('weights').value.split(',').map(Number), gamma:Number($('gamma').value), strength:Number($('strength').value), foreground:$('foreground').value, background:$('background').value };
+    const options = { text:$('text').value, size:Number($('size').value)*dpr, x:22*dpr, baseline:39*dpr, lineHeight:Number($('size').value)*1.65*dpr, mode:$('mode').value, axis:$('axis').value, order:$('order').value, geometry:$('mode').value === 'harmony' ? $('geometry').value : 'stripe', hinting:$('hinting').checked, filter:$('mode').value === 'lcd' ? $('filter').value : 'default', weights:$('weights').value.split(',').map(Number), features:selectedSets(), gamma:Number($('gamma').value), strength:Number($('strength').value), foreground:$('foreground').value, background:$('background').value };
     let stats;
     for (const id of ['rendered','comparison']) {
       const canvas = $(id);
@@ -49,9 +49,21 @@ function magnify() {
   ctx.drawImage(source,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
   $('inspect-label').textContent=`${inspection.source==='comparison'?'Grayscale':names[$('mode').value]} · ${zoom}×`;
 }
+const selectedSets=()=>[...$('sets').querySelectorAll('input:checked')].map(input=>input.value);
+// List the loaded font's stylistic sets, keeping any selection it still offers.
+function updateSets() {
+  const selected=new Set(selectedSets()), sets=renderer.font.features.filter(tag=>/^ss\d\d$/.test(tag));
+  $('sets-row').hidden=!sets.length;
+  $('sets').replaceChildren(...sets.map(tag=>{
+    const label=document.createElement('label'), input=document.createElement('input'), name=document.createElement('span');
+    label.className='checkbox';input.type='checkbox';input.value=tag;input.checked=selected.has(tag);name.textContent=tag;
+    label.append(input,name);return label;
+  }));
+}
 async function loadFont(bytes) {
   const info=renderer.loadFont(bytes);
   $('font-name').textContent=`${info.familyName} ${info.styleName}`;
+  updateSets();
   render();
 }
 $('controls').addEventListener('input',event=>{if(event.target.id!=='font-file') schedule();});

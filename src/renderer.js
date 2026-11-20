@@ -1,9 +1,11 @@
 import initFreeType from '../vendor/freetype/index.mjs';
 import * as opentype from '../vendor/opentype.mjs';
 import { bitmapCoverage, composite, FILTERS, parseColor, normalizeWeights } from './coverage.js';
+import { createLayout } from './layout.js';
 
 /** ClearType-style renderer. All dimensions are backing-store/device pixels.
- * Layout uses OpenType glyph IDs, advances, ligatures and pair kerning.
+ * Layout uses OpenType glyph IDs, advances, ligatures, optional features such
+ * as stylistic sets, and GPOS pair kerning (see layout.js).
  * General complex-script shaping requires a HarfBuzz layout adapter.
  */
 export class SubpixelRenderer {
@@ -25,8 +27,21 @@ export class SubpixelRenderer {
     const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     const parsed = opentype.parse(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
     const face = this.ft.newFace(data);
-    this.face?.destroy(); this.face = face; this.font = parsed; this.cache.clear();
+    let font;
+    try { font = createLayout(parsed, this.table(face, 'GPOS')); } catch (error) { face.destroy(); throw error; }
+    this.face?.destroy(); this.face = face; this.font = font; this.cache.clear();
     return face.info();
+  }
+  /** Raw sfnt table bytes via FreeType, which also unpacks WOFF; null if absent. */
+  table(face, name) {
+    const tag = [...name].reduce((value, char) => value * 256 + char.charCodeAt(0), 0);
+    this.m.setValue(this.scratch, 0, 'i32');
+    if (this.call('FT_Load_Sfnt_Table', [face.ptr, tag, 0, 0, this.scratch])) return null;
+    const length = this.m.getValue(this.scratch, 'i32'), buffer = this.m._malloc(length);
+    try {
+      this.check(this.call('FT_Load_Sfnt_Table', [face.ptr, tag, 0, buffer, this.scratch]), 'Load table');
+      return this.m.HEAPU8.slice(buffer, buffer + length);
+    } finally { this.m._free(buffer); }
   }
   setGeometry(geometry) {
     const points = geometry === 'pentile' ? [[-11,16],[-11,-16],[21,0]] : [[-21,0],[0,0],[21,0]];
@@ -72,11 +87,12 @@ export class SubpixelRenderer {
     const tile = bitmapCoverage(bitmap, { axis: lcd ? axis : 'gray', raw: mode === 'lcd', weights: mode === 'lcd' ? (filter === 'custom' ? weights : FILTERS[filter]) : null });
     this.cache.set(key,tile); return tile;
   }
-  render({ text, width, height, size = 18, x = 20, baseline = 36, lineHeight = size * 1.65, mode = 'lcd', axis = 'horizontal', geometry = 'stripe', order = 'rgb', hinting = true, filter = 'default', weights = [8,77,86,77,8], gamma = 2.2, strength = 1, foreground = '#20231f', background = '#ffffff' }) {
+  render({ text, width, height, size = 18, x = 20, baseline = 36, lineHeight = size * 1.65, mode = 'lcd', axis = 'horizontal', geometry = 'stripe', order = 'rgb', hinting = true, filter = 'default', weights = [8,77,86,77,8], features = [], gamma = 2.2, strength = 1, foreground = '#20231f', background = '#ffffff' }) {
     if (!this.face) throw new Error('Load a font before rendering.');
     if (![width,height].every(v => Number.isInteger(v) && v > 0 && v <= 8192) || width*height > 16000000) throw new Error('Canvas dimensions exceed the rendering limit.');
     if (!Number.isFinite(size) || size < 1 || size > 512 || !Number.isFinite(gamma) || gamma <= 0 || !Number.isFinite(strength) || strength < 0) throw new Error('Invalid rendering parameters.');
     if (!['lcd','harmony','gray'].includes(mode) || !['horizontal','vertical'].includes(axis) || !['rgb','bgr'].includes(order) || !['default','light','none','custom'].includes(filter)) throw new Error('Unknown rendering mode.');
+    if (!Array.isArray(features) || !features.every(tag => typeof tag === 'string' && /^[\x20-\x7e]{4}$/.test(tag))) throw new Error('Features must be four-character OpenType tags.');
     if (mode === 'harmony' && !this.capabilities.harmony) throw new Error('This FreeType build does not support Harmony.');
     const normalized = filter === 'custom' ? normalizeWeights(weights) : weights;
     this.setGeometry(geometry);
@@ -90,7 +106,7 @@ export class SubpixelRenderer {
     let count = 0, missing = 0, cursorY = baseline;
     for (const line of text.replace(/\t/g,'    ').split('\n')) {
       let cursorX = x;
-      const glyphs = this.font.stringToGlyphs(line);
+      const glyphs = this.font.stringToGlyphs(line, features);
       for (let i=0;i<glyphs.length;i++) {
         const glyph = glyphs[i];
         const advance = (glyph.advanceWidth || 0) * size / this.font.unitsPerEm;

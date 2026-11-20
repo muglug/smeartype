@@ -1,6 +1,6 @@
 # Smeartype
 
-An HTML Canvas ClearType-style renderer and interactive type lab. Uses **OpenType.js 2.0.0** for glyph selection, ligatures, font metrics and kerning, and **FreeType WASM 2.14.3** for hinting and rasterization. No runtime CDN requests or uploaded-font transmission.
+An HTML Canvas ClearType-style renderer and interactive type lab. Uses **OpenType.js 2.0.0** for font parsing, glyph selection and metrics, a small layout adapter for ligatures, stylistic sets and GPOS pair kerning, and **FreeType WASM 2.14.3** for hinting and rasterization. No runtime CDN requests or uploaded-font transmission.
 
 Live demo: [muglug.github.io/smeartype](https://muglug.github.io/smeartype/).
 
@@ -42,6 +42,7 @@ renderer.draw(canvas, {
   order: 'rgb',               // rgb | bgr
   filter: 'default',          // default | light | none | custom
   weights: [8, 77, 86, 77, 8], // custom, normalized to sum to 256
+  features: ['ss05'],         // extra OpenType feature tags, e.g. stylistic sets
   hinting: true,
   gamma: 2.2,
   strength: 1,
@@ -53,6 +54,12 @@ renderer.draw(canvas, {
 ```
 
 All API lengths are **backing-store pixels**, including font size and baseline. The demo converts CSS pixels using devicePixelRatio and rerenders on resize. The core exposes `capabilities` with `version`, `v40`, `harmony`, and `nativeFilter`.
+
+## Layout and stylistic sets
+
+`features` takes four-character OpenType tags to enable alongside the default `liga` and `rlig`; tags the font lacks are ignored. After `loadFont`, `renderer.font.features` lists the GSUB features the font offers, and the demo shows a checkbox for each stylistic set (`ss01`–`ss20`) found there.
+
+`src/layout.js` applies the enabled lookups in lookup-list order, as HarfBuzz does, so a stylistic set can replace a glyph before the ligature lookups run. Single, multiple, alternate (first alternate) and ligature substitutions are supported; contextual lookups are skipped. Pair kerning sums the `kern` feature's pair adjustments, including extension lookups, from the raw GPOS table, and falls back to the legacy `kern` table. Features and kerning use the Latin script's default language system.
 
 ## Rendering paths
 
@@ -70,7 +77,7 @@ The gamma slider uses a power-law transfer function: decode each channel as `(va
 
 This mimics ClearType's subpixel mechanism; it is not Microsoft's proprietary renderer or an implementation of Platt's optimization algorithm. Physical panel geometry, browser compositing, OS scaling, zoom, and display orientation affect the result. Inspect at 100% zoom and native resolution. Export retains backing-store pixels; scaling the export can destroy subpixel alignment.
 
-TTF, OTF and WOFF outline fonts are accepted when both libraries support them. General complex-script shaping, bidirectional layout, color glyphs, WOFF2 decompression and variable-font axis controls are not provided. The UI is a fixed-height specimen viewport, so long samples can be clipped; the API lets callers choose dimensions. Word wrapping uses OpenType advances, with per-glyph breaks for oversized words. Fractional horizontal positioning is supported; baselines are snapped to integer pixels. Text size, canvas dimensions and upload size are bounded in the demo/API.
+TTF, OTF and WOFF outline fonts are accepted when both libraries support them. General complex-script shaping, contextual substitutions, mark positioning, bidirectional layout, color glyphs, WOFF2 decompression and variable-font axis controls are not provided. The UI is a fixed-height specimen viewport, so long samples can be clipped; the API lets callers choose dimensions. Word wrapping uses OpenType advances, with per-glyph breaks for oversized words. Fractional horizontal positioning is supported; baselines are snapped to integer pixels. Text size, canvas dimensions and upload size are bounded in the demo/API.
 
 ## References and notices
 

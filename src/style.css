@@ -22,6 +22,8 @@ output { color: #222; font-variant-numeric: tabular-nums; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .checkbox { display: flex; gap: 7px; align-items: center; }
 .checkbox input { margin: 0; accent-color: #666; }
+.sets { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 6px 0 12px; }
+.sets label { margin: 0; }
 small { display: block; margin-top: 5px; color: #666; font-size: 11px; }
 .colors { display: flex; gap: 24px; }
 .colors label { display: flex; align-items: center; gap: 6px; }
