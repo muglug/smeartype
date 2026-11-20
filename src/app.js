@@ -2,9 +2,13 @@ import { SubpixelRenderer } from './renderer.js';
 const $ = id => document.getElementById(id);
 let renderer, frame, fontGeneration = 0, inspection = { source: 'rendered', x: 40, y: 32 };
 const names = {lcd:'LCD',harmony:'Harmony',gray:'Grayscale'};
+// Backing-store pixels per CSS pixel. At 1× on a denser display each rendered
+// pixel is enlarged to cover several device pixels.
+const pixelScale = () => $('density').value === 'device' ? window.devicePixelRatio || 1 : Number($('density').value);
 function showError(error) { $('error').hidden = !error; $('error').textContent = error?.message || ''; if(error) $('export').disabled = true; }
 function updateLabels() {
   $('size-value').textContent = `${$('size').value} px`;
+  $('density').options[0].textContent = `Device · ${Number((window.devicePixelRatio || 1).toFixed(2))}×`;
   $('gamma-value').textContent = Number($('gamma').value).toFixed(1);
   $('strength-value').textContent = Number($('strength').value).toFixed(2);
   $('filter-controls').hidden = $('mode').value !== 'lcd';
@@ -19,7 +23,7 @@ function render() {
   try {
     updateLabels();
     const start = performance.now();
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = pixelScale();
     const cssWidth = Math.floor($('rendered').parentElement.clientWidth - 2);
     const cssHeight = 162;
     const options = { text:$('text').value, size:Number($('size').value)*dpr, x:22*dpr, baseline:39*dpr, lineHeight:Number($('size').value)*1.65*dpr, mode:$('mode').value, axis:$('axis').value, order:$('order').value, geometry:$('mode').value === 'harmony' ? $('geometry').value : 'stripe', hinting:$('hinting').checked, filter:$('mode').value === 'lcd' ? $('filter').value : 'default', weights:$('weights').value.split(',').map(Number), features:selectedSets(), gamma:Number($('gamma').value), strength:Number($('strength').value), foreground:$('foreground').value, background:$('background').value };
@@ -28,17 +32,18 @@ function render() {
       const canvas = $(id);
       canvas.width = Math.round(cssWidth*dpr); canvas.height = Math.round(cssHeight*dpr);
       canvas.style.width = `${canvas.width/dpr}px`; canvas.style.height = `${canvas.height/dpr}px`;
+      canvas.style.imageRendering = dpr === (window.devicePixelRatio || 1) ? '' : 'pixelated';
       const result = renderer.draw(canvas,{...options,mode:id==='comparison'?'gray':options.mode,filter:id==='comparison'?'default':options.filter});
       if (id==='rendered') stats=result;
     }
-    $('status').textContent = `FreeType ${renderer.capabilities.version} / ${stats.glyphCount} glyphs / ${(performance.now()-start).toFixed(1)} ms / ${dpr.toFixed(2)}× device scale${stats.missingGlyphs ? ` / ${stats.missingGlyphs} missing glyphs` : ''}`;
+    $('status').textContent = `FreeType ${renderer.capabilities.version} / ${stats.glyphCount} glyphs / ${(performance.now()-start).toFixed(1)} ms / ${dpr.toFixed(2)}× pixel scale${stats.missingGlyphs ? ` / ${stats.missingGlyphs} missing glyphs` : ''}`;
     $('export').disabled = false;showError(null);magnify();
   } catch(error) { showError(error); }
 }
 function schedule() { cancelAnimationFrame(frame); frame=requestAnimationFrame(render); }
 function magnify() {
   const source=$(inspection.source), canvas=$('magnified'), zoom=Number($('zoom').value);
-  const dpr=window.devicePixelRatio||1;
+  const dpr=pixelScale();
   canvas.width=Math.round(canvas.parentElement.clientWidth*dpr);canvas.height=Math.round(canvas.parentElement.clientHeight*dpr);
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
   ctx.fillStyle=$('background').value;ctx.fillRect(0,0,canvas.width,canvas.height);

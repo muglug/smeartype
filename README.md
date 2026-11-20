@@ -53,7 +53,7 @@ renderer.draw(canvas, {
 // Call renderer.destroy() when finished to release native resources.
 ```
 
-All API lengths are **backing-store pixels**, including font size and baseline. The demo converts CSS pixels using devicePixelRatio and rerenders on resize. The core exposes `capabilities` with `version`, `v40`, `harmony`, and `nativeFilter`.
+All API lengths are **backing-store pixels**, including font size and baseline. The demo converts CSS pixels using devicePixelRatio and rerenders on resize; setting **Pixel density** to 1× instead renders at 96 DPI and enlarges each pixel, so a high-density display shows what a standard one would. The core exposes `capabilities` with `version`, `v40`, `harmony`, and `nativeFilter`.
 
 ## Layout and stylistic sets
 
