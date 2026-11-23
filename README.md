@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Node 17.4+ works; a maintained Node LTS is recommended. `npm test` runs pixel-level checks using the actual WASM engine. `npm run build` creates a self-contained static `dist/`; `npm run preview` serves that build. Serve through HTTP, not `file://`. The included server is for local development only.
+Open http://127.0.0.1:5173. The font menu lists the bundled Lato 2.015 Regular and the eighteen Lato26 static faces, and **Upload font** adds a local file to it. `node scripts/update-lato26.mjs [DIR]` refreshes the Lato26 faces from a [lato-source](https://github.com/muglug/lato-source) checkout. Node 17.4+ works; a maintained Node LTS is recommended. `npm test` runs pixel-level checks using the actual WASM engine. `npm run build` creates a self-contained static `dist/`; `npm run preview` serves that build. Serve through HTTP, not `file://`. The included server is for local development only.
 
 ## Renderer API
 
@@ -88,4 +88,4 @@ TTF, OTF and WOFF outline fonts are accepted when both libraries support them. G
 
 Portions of this software are copyright © The FreeType Project (www.freetype.org). All rights reserved.
 
-Bundled native dependency notices are copied to `vendor/freetype/licenses/`. OpenType.js's MIT license is copied to `vendor/OPENTYPE-LICENSE`. Lato is distributed under the SIL Open Font License, included in `public/fonts/OFL.txt`.
+Bundled native dependency notices are copied to `vendor/freetype/licenses/`. OpenType.js's MIT license is copied to `vendor/OPENTYPE-LICENSE`. Lato and Lato26, a modified Lato, are distributed under the SIL Open Font License, included in `public/fonts/OFL.txt`.

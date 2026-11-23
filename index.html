@@ -8,7 +8,8 @@
 <label for="text">Text</label><textarea id="text" rows="4" maxlength="2000" spellcheck="false">The quick brown fox jumps over the lazy dog.
 Typography is the craft of making language visible.
 Hamburgefontsiv 0123456789 & @</textarea>
-<div class="font-row"><div><span class="muted">Font</span><strong id="font-name">Lato Regular</strong></div><button type="button" id="upload" class="upload" title="Load a local TTF, OTF or WOFF font">Upload font</button><input type="file" id="font-file" accept=".ttf,.otf,.woff" hidden></div>
+<div class="font-row"><label for="font">Font</label><button type="button" id="upload" class="upload" title="Load a local TTF, OTF or WOFF font">Upload font</button><input type="file" id="font-file" accept=".ttf,.otf,.woff" hidden></div>
+<select id="font"><option value="public/fonts/Lato-Regular.ttf">Lato 2.015 Regular</option></select>
 <div id="sets-row" role="group" aria-labelledby="sets-label" hidden><span id="sets-label" class="muted">Stylistic sets</span><div id="sets" class="sets"></div></div>
 <label for="size" class="range-label">Size <output id="size-value">18 px</output></label><input id="size" type="range" min="8" max="48" step="1" value="18">
 <label for="density">Pixel density</label><select id="density"><option value="device">Device</option><option value="1">1× · 96 DPI</option></select>

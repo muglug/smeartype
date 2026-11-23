@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { SubpixelRenderer } from '../src/renderer.js';
 import { bitmapCoverage, FILTERS, normalizeWeights, composite } from '../src/coverage.js';
@@ -26,4 +27,5 @@ test('invalid font retains prior face',()=>{assert.throws(()=>renderer.loadFont(
 test('reject invalid filters and allocation sizes',()=>{assert.throws(()=>normalizeWeights([0,0,0,0,0]));assert.throws(()=>renderer.render({...options,width:90000}));assert.throws(()=>renderer.render({...options,filter:'custom',weights:[NaN,1,1,1,1]}));});
 test('FIR crosses pixel boundaries and retains negative bearings',()=>{const tile=bitmapCoverage({width:1,rows:1,pitch:1,buffer:new Uint8Array([255]),bitmapLeft:0,bitmapTop:1},{axis:'horizontal',raw:true,weights:FILTERS.default});assert.equal(tile.left,-1);assert(tile.coverage[1]>0);assert(Math.abs(tile.coverage.reduce((a,b)=>a+b,0)-1)<1e-6);});
 test('per-channel blending uses linearized light',()=>{const target=new Uint8ClampedArray([255,255,255,255]);composite(target,1,1,{width:1,height:1,left:0,top:0,coverage:[.5,.5,.5]},0,0,{foreground:[0,0,0],gamma:2.2});assert.equal(target[0],186);assert.equal(target[3],255);});
+test('bundled Lato26 faces load with both stylistic sets',()=>{const faces=['','Italic'].flatMap(italic=>['Hairline','Thin','Light','Regular','Medium','Semibold','Bold','Heavy','Black'].map(weight=>italic&&weight==='Regular'?'Italic':weight+italic));assert.equal(faces.length,18);for(const face of faces){renderer.loadFont(readFileSync(`public/fonts/lato26/Lato26-${face}.ttf`));assert(renderer.font.features.includes('ss05')&&renderer.font.features.includes('ss09'),face);assert.notDeepEqual(renderer.render({...options,text:'hello',features:['ss09']}).data,renderer.render({...options,text:'hello'}).data);}});
 renderer.destroy();console.log(`${tests} checks passed.`);

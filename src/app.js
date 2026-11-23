@@ -1,6 +1,6 @@
 import { SubpixelRenderer } from './renderer.js';
 const $ = id => document.getElementById(id);
-let renderer, frame, fontGeneration = 0, inspection = { source: 'rendered', x: 40, y: 32 };
+let renderer, frame, uploaded, fontGeneration = 0, inspection = { source: 'rendered', x: 40, y: 32 };
 const names = {lcd:'LCD',harmony:'Harmony',gray:'Grayscale'};
 // Backing-store pixels per CSS pixel. At 1× on a denser display each rendered
 // pixel is enlarged to cover several device pixels.
@@ -65,13 +65,31 @@ function updateSets() {
     label.append(input,name);return label;
   }));
 }
-async function loadFont(bytes) {
+function loadFont(bytes) {
   const info=renderer.loadFont(bytes);
-  $('font-name').textContent=`${info.familyName} ${info.styleName}`;
   updateSets();
   render();
+  return info;
 }
-$('controls').addEventListener('input',event=>{if(event.target.id!=='font-file') schedule();});
+// Bundled Lato26 faces follow the default font; an uploaded font is listed last.
+for(const italic of ['','Italic']) {
+  const group=document.createElement('optgroup');group.label=italic?'Lato26 Italic':'Lato26';
+  for(const weight of ['Hairline','Thin','Light','Regular','Medium','Semibold','Bold','Heavy','Black']) {
+    const style=italic&&weight==='Regular'?'Italic':weight+italic;
+    group.append(new Option(`Lato26 ${italic?`${weight} Italic`:weight}`,`public/fonts/lato26/Lato26-${style}.ttf`));
+  }
+  $('font').append(group);
+}
+async function selectFont() {
+  const generation=++fontGeneration, value=$('font').value;
+  try {
+    let bytes=uploaded;
+    if(value!=='upload') {const response=await fetch(value);if(!response.ok)throw new Error('Could not load bundled font.');bytes=await response.arrayBuffer();}
+    if(generation===fontGeneration)loadFont(bytes);
+  } catch(error){showError(error);}
+}
+$('font').addEventListener('change',selectFont);
+$('controls').addEventListener('input',event=>{if(!['font','font-file'].includes(event.target.id)) schedule();});
 $('controls').addEventListener('submit',e=>e.preventDefault());
 $('zoom').addEventListener('change',magnify);
 for(const id of ['rendered','comparison']) $(id).addEventListener('pointermove',event=>{
@@ -81,12 +99,19 @@ $('upload').addEventListener('click',()=>$('font-file').click());
 $('font-file').addEventListener('change',async event=>{
   const file=event.target.files[0];if(!file)return;
   const generation=++fontGeneration;
-  try { if(file.size>20*1024*1024)throw new Error('Please choose a font smaller than 20 MB.'); const bytes=await file.arrayBuffer();if(generation===fontGeneration)await loadFont(bytes); } catch(error){showError(new Error(`Could not load font: ${error.message}`));}
+  try {
+    if(file.size>20*1024*1024)throw new Error('Please choose a font smaller than 20 MB.');
+    const bytes=await file.arrayBuffer();
+    if(generation===fontGeneration) {
+      const info=loadFont(bytes);uploaded=bytes;
+      $('font').querySelector('[value=upload]')?.remove();
+      $('font').append(new Option(`Uploaded · ${info.familyName} ${info.styleName}`,'upload',false,true));
+    }
+  } catch(error){showError(new Error(`Could not load font: ${error.message}`));}
   event.target.value='';
 });
 $('reset').addEventListener('click',async()=>{
-  $('controls').reset();inspection={source:'rendered',x:40,y:32};const generation=++fontGeneration;
-  try {const response=await fetch('public/fonts/Lato-Regular.ttf');if(!response.ok)throw new Error('Could not load bundled font.');const bytes=await response.arrayBuffer();if(generation===fontGeneration)await loadFont(bytes);}catch(error){showError(error);}
+  $('controls').reset();inspection={source:'rendered',x:40,y:32};await selectFont();
 });
 $('export').addEventListener('click',()=>{
   $('rendered').toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`smeartype-${$('mode').value}.png`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
@@ -99,5 +124,5 @@ try {
   $('hinting').checked=renderer.capabilities.v40;
   $('mode').querySelector('[value=harmony]').disabled=!renderer.capabilities.harmony;
 
-  const response=await fetch('public/fonts/Lato-Regular.ttf');if(!response.ok)throw new Error('Could not load bundled font.');await loadFont(await response.arrayBuffer());
+  await selectFont();
 } catch(error){$('status').textContent='Renderer could not initialize.';showError(error);}

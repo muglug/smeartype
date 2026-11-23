@@ -16,9 +16,9 @@ button:disabled { opacity: .45; cursor: default; }
 input[type=range] { display: block; width: 100%; height: 4px; margin: 12px 0 18px; accent-color: #666; cursor: pointer; }
 .range-label { display: flex; justify-content: space-between; }
 output { color: #222; font-variant-numeric: tabular-nums; }
-.font-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0; }
+.font-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 6px; }
+.font-row label { margin: 0; }
 .muted { font-size: 11px; color: #666; }
-.font-row strong { display: block; max-width: 135px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 500; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .checkbox { display: flex; gap: 7px; align-items: center; }
 .checkbox input { margin: 0; accent-color: #666; }
